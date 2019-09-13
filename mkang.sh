@@ -1,5 +1,5 @@
 #!/bin/bash
-# A script to create a new basic Angular project, by Michael K
+# A script to create a new basic Angular project, by Michael K. https://github.com/mkemper31/
 
 template_dir=~/Local_code/tracks/mean_stack/angular/angular_template
 dir=$1
@@ -28,6 +28,7 @@ const app = express();
 const session = require('express-session');
 const path = require('path');
 const bp = require('body-parser');
+const fs = require('fs');
 const mongoose = require('mongoose');
 mongoose.connect('mongodb://localhost/$db', {useNewUrlParser: true});
 fs.readdirSync(path.join(__dirname, './../models')).forEach(function(file) {
@@ -131,3 +132,4 @@ git init &&
 sudo ditto -v $template_dir/.gitignore $PWD &&
 osascript -e "tell application \"Terminal\" to do script \"cd $targetdir && ng build --watch\"" &&
 code .
+echo "https://github.com/mkemper31/"
