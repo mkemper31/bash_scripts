@@ -4,13 +4,14 @@
 template_dir=~/Local_code/tracks/mean_stack/angular/angular_template
 dir=$1
 targetdir=$PWD/$dir/public
-
+echo "What do you want your database to be called?"
+read db
+echo "What do you want your first model to be named?"
+read model
+modelupper="$(tr '[:lower:]' '[:upper:]' <<< ${model:0:1})${model:1}"
+modellower="$(tr '[:upper:]' '[:lower:]' <<< ${model:0:1})${model:1}"
 mkdir $dir &&
 cd $dir &&
-mkdir public &&
-cd public &&
-sudo ditto -v $template_dir/* $PWD &&
-cd .. &&
 npm init -y &&
 npm i express &&
 npm i mongoose &&
@@ -27,11 +28,17 @@ const app = express();
 const session = require('express-session');
 const path = require('path');
 const bp = require('body-parser');
+const mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost/$db', {useNewUrlParser: true});
+fs.readdirSync(path.join(__dirname, './../models')).forEach(function(file) {
+    if(file.indexOf('.js') >= 0) {
+        require(path.join(__dirname, './../models') + '/' + file);
+    }
+});
 app.use(express.urlencoded({extended: true}));
 app.use(bp.urlencoded({ extended: false }))
 app.use(bp.json())
 app.use(express.static( path.join(__dirname, './../../public/dist/public')));
-console.log(path.join(__dirname,  './../../public/dist/public'));
 app.use(session({
     secret: 'thisisakey',
     resave: false,
@@ -40,20 +47,87 @@ app.use(session({
 }));
 module.exports = app;" | tee server/config/mongoose.js &&
 touch server/config/routes.js &&
-echo "const placeholders = require('../controllers/placeholders.js');
-module.exports = (app) => { }" | tee server/config/routes.js &&
-touch server/controllers/placeholders.js &&
-echo "const Placeholder = require('../models/placeholder.js')
-module.exports = { }" | tee server/controllers/placeholders.js &&
-touch server/models/placeholder.js &&
+echo "const ${modellower}s = require('../controllers/${modellower}s.js');
+module.exports = (app) => {
+	// Get all ${modellower}s
+    app.get('/${modellower}s', (req, res) => {
+        ${modellower}s.all(req, res);
+    });
+    // Get one ${modellower} by ID
+    app.get('/${modellower}s/:id', (req, res) => {
+        ${modellower}s.one(req, res);
+    });
+    // Create a new ${modellower}
+    app.post('/${modellower}s/create', (req, res) => {
+        ${modellower}s.create(req, res);
+    });
+    // Update a ${modellower} by ID, passing in data
+    app.put('/${modellower}/:id', (req, res) => {
+        ${modellower}s.update(req, res);
+    });
+    // Delete a ${modellower} by ID
+    app.delete('/${modellower}s/:id', (req, res) => {
+        ${modellower}s.delete(req, res);
+    });
+}" | tee server/config/routes.js &&
+touch server/controllers/${modellower}s.js &&
 echo "const mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost/placeholder', {useNewUrlParser: true});
-const PlaceholderSchema = new mongoose.Schema({
+const ${modelupper} = mongoose.model('${modelupper}')
+module.exports = {
+    all: async (req, res) => {
+        try {
+            const ${modellower}s = await ${modelupper}.find();
+            res.json({${modellower}s: ${modellower}s});
+        }
+        catch (err) {
+            res.json(err);
+        }
+    },
+    one: async (req, res) => {
+        let ${modellower} = await ${modelupper}.findById({ _id : req.params.id });
+        ${modelupper}.findById({ _id : req.params.id })
+            .then((data) => {
+                res.json({${modellower}: data})
+            })
+            .catch(err => res.json(err));
+    },
+    create: (req, res) => {
+        const ${modellower} = new ${modelupper}(req.body);
+        ${modellower}.save()
+            .then((data) => {
+                res.json({new${modelupper}: data});
+            })
+            .catch(err => res.json(err));
+    },
+    update: (req, res) => {
+        ${modelupper}.updateOne({ _id : req.params.id }, req.body)
+            .then((data) => {
+                res.json({updated${modelupper}: data});
+            })
+            .catch(err => res.json(err));
+    },
+    delete: async (req, res) => {
+        ${modelupper}.findOneAndDelete({ _id : req.params.id })
+            .then((data) => {
+                res.json(data);
+            })
+            .catch(err => {
+                res.json(err);
+            }) ;
+    },
+}" | tee server/controllers/${modellower}s.js &&
+touch server/models/${modellower}.js &&
+echo "const mongoose = require('mongoose');
+const ${modelupper}Schema = new mongoose.Schema({
     title: { type: String, required: true},
     description: { type: String, default: '', },
 }, {timestamps: true });
-module.exports = mongoose.model('Placeholder', PlaceholderSchema);" | tee server/models/placeholder.js &&
+mongoose.model('${modelupper}', ${modelupper}Schema);" | tee server/models/${modellower}.js &&
+mkdir public &&
+cd public &&
+sudo ditto -v $template_dir/* $PWD &&
+cd .. &&
 git init &&
 sudo ditto -v $template_dir/.gitignore $PWD &&
-osascript -e "tell application \"Terminal\" to do script \"source ~/.profile && cd $targetdir && ng build --watch\"" &&
+osascript -e "tell application \"Terminal\" to do script \"cd $targetdir && ng build --watch\"" &&
 code .
