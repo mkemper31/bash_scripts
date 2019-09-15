@@ -11,4 +11,6 @@ After script completion, server will be ready to run; if you run nodemon server.
 
 3. newproject.sh - Create a new Python Django project template, including instantiating a new app (name specified as part of the command string)
 
-4. setupserver.sh - Automates deployment of Java Spring Boot projects, assuming use of an Ubuntu 16.04 server.
+4. deployspring.sh - Automates deployment of Java Spring Boot projects, assuming use of an Ubuntu 16.04 server.
+
+5. deploymean.sh - Automates deployment of MEAN stack projects, assuming use of an Ubuntu 16.04 server.

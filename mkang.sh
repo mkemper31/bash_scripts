@@ -51,24 +51,19 @@ touch server/config/routes.js &&
 echo "const ${modellower}s = require('../controllers/${modellower}s.js');
 module.exports = (app) => {
 	// Get all ${modellower}s
-    app.get('/${modellower}s', (req, res) => {
-        ${modellower}s.all(req, res);
+    app.get('/${modellower}s', ${modellower}s.all);
     });
     // Get one ${modellower} by ID
-    app.get('/${modellower}s/:id', (req, res) => {
-        ${modellower}s.one(req, res);
+    app.get('/${modellower}s/:id', ${modellower}s.getOneById);
     });
     // Create a new ${modellower}
-    app.post('/${modellower}s/create', (req, res) => {
-        ${modellower}s.create(req, res);
+    app.post('/${modellower}s/create', ${modellower}s.create);
     });
     // Update a ${modellower} by ID, passing in data
-    app.put('/${modellower}/:id', (req, res) => {
-        ${modellower}s.update(req, res);
+    app.put('/${modellower}s/:id', ${modellower}s.update);
     });
     // Delete a ${modellower} by ID
-    app.delete('/${modellower}s/:id', (req, res) => {
-        ${modellower}s.delete(req, res);
+    app.delete('/${modellower}s/:id', ${modellower}s.delete);
     });
 }" | tee server/config/routes.js &&
 touch server/controllers/${modellower}s.js &&
@@ -84,7 +79,7 @@ module.exports = {
             res.json(err);
         }
     },
-    one: async (req, res) => {
+    getOneById: async (req, res) => {
         let ${modellower} = await ${modelupper}.findById({ _id : req.params.id });
         ${modelupper}.findById({ _id : req.params.id })
             .then((data) => {
