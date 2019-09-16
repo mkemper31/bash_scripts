@@ -4,39 +4,57 @@
 template_dir=~/Local_code/tracks/mean_stack/angular/angular_template
 dir=$1
 targetdir=$PWD/$dir/public
-echo "What do you want your database to be called?"
+echo "--> What do you want your database to be called? Leave blank if you do not want to use a database connection."
 read db
-echo "What do you want your first model to be named?"
-read model
-modelupper="$(tr '[:lower:]' '[:upper:]' <<< ${model:0:1})${model:1}"
-modellower="$(tr '[:upper:]' '[:lower:]' <<< ${model:0:1})${model:1}"
+if [ ! -z "$db" ]
+then
+	echo "--> What do you want your first model to be named?"
+	read model
+	if [ -z "$model" ]
+	then
+		echo "Model name not provided! Exiting..."
+		exit 1
+	else
+		modelupper="$(tr '[:lower:]' '[:upper:]' <<< ${model:0:1})${model:1}"
+		modellower="$(tr '[:upper:]' '[:lower:]' <<< ${model:0:1})${model:1}"
+	fi
+fi
+
 mkdir $dir &&
 cd $dir &&
 npm init -y &&
 npm i express &&
-npm i mongoose &&
+if [ ! -z "$db" ]
+then
+	npm i mongoose
+fi
 npm i express-session &&
 npm i body-parser &&
 touch server.js &&
 echo "const app = require('./server/config/mongoose.js')
 app.listen(8000, () => console.log('listening on port 8000'));
-require('./server/config/routes.js')(app);" | tee server.js &&
+require('./server/config/routes.js')(app);" > server.js &&
 mkdir server server/config server/controllers server/models &&
 touch server/config/mongoose.js &&
 echo "const express = require('express');
 const app = express();
 const session = require('express-session');
 const path = require('path');
-const bp = require('body-parser');
-const fs = require('fs');
+const bp = require('body-parser');" >> server/config/mongoose.js &&
+
+if [ ! -z "$db" ]
+then
+	echo "const fs = require('fs');
 const mongoose = require('mongoose');
 mongoose.connect('mongodb://localhost/$db', {useNewUrlParser: true});
 fs.readdirSync(path.join(__dirname, './../models')).forEach(function(file) {
     if(file.indexOf('.js') >= 0) {
         require(path.join(__dirname, './../models') + '/' + file);
     }
-});
-app.use(express.urlencoded({extended: true}));
+});" >> server/config/mongoose.js
+fi
+
+echo "app.use(express.urlencoded({extended: true}));
 app.use(bp.urlencoded({ extended: false }))
 app.use(bp.json())
 app.use(express.static( path.join(__dirname, './../../public/dist/public')));
@@ -46,28 +64,39 @@ app.use(session({
     saveUninitialized: true,
     cookie: { maxAge: 60000 }
 }));
-module.exports = app;" | tee server/config/mongoose.js &&
-touch server/config/routes.js &&
-echo "const ${modellower}s = require('../controllers/${modellower}s.js');
-module.exports = (app) => {
-	// Get all ${modellower}s
+module.exports = app;" >> server/config/mongoose.js
+touch server/config/routes.js
+
+if [ ! -z "$db" ]
+then
+	echo "const ${modellower}s = require('../controllers/${modellower}s.js');" >> server/config/routes.js
+fi
+
+echo "const path = require('path');
+module.exports = (app) => {" >> server/config/routes.js
+if [ ! -z "$db" ]
+then
+	echo "    // Get all ${modellower}s
     app.get('/${modellower}s', ${modellower}s.all);
-    });
     // Get one ${modellower} by ID
     app.get('/${modellower}s/:id', ${modellower}s.getOneById);
-    });
     // Create a new ${modellower}
     app.post('/${modellower}s/create', ${modellower}s.create);
-    });
     // Update a ${modellower} by ID, passing in data
     app.put('/${modellower}s/:id', ${modellower}s.update);
-    });
     // Delete a ${modellower} by ID
-    app.delete('/${modellower}s/:id', ${modellower}s.delete);
+    app.delete('/${modellower}s/:id', ${modellower}s.delete);" >> server/config/routes.js
+fi
+
+echo "    // Catchall for malformed requests
+    app.all('*', (req, res, next) => {
+        res.sendFile(path.resolve('./public/dist/public/index.html'));
     });
-}" | tee server/config/routes.js &&
-touch server/controllers/${modellower}s.js &&
-echo "const mongoose = require('mongoose');
+}" >> server/config/routes.js
+if [ ! -z "$db" ]
+then
+	touch server/controllers/${modellower}s.js
+	echo "const mongoose = require('mongoose');
 const ${modelupper} = mongoose.model('${modelupper}')
 module.exports = {
     all: async (req, res) => {
@@ -111,16 +140,17 @@ module.exports = {
                 res.json(err);
             }) ;
     },
-}" | tee server/controllers/${modellower}s.js &&
-touch server/models/${modellower}.js &&
-echo "const mongoose = require('mongoose');
+}" | tee server/controllers/${modellower}s.js
+	touch server/models/${modellower}.js
+	echo "const mongoose = require('mongoose');
 const ${modelupper}Schema = new mongoose.Schema({
     title: { type: String, required: true},
     description: { type: String, default: '', },
 }, {timestamps: true });
-mongoose.model('${modelupper}', ${modelupper}Schema);" | tee server/models/${modellower}.js &&
-mkdir public &&
-cd public &&
+mongoose.model('${modelupper}', ${modelupper}Schema);" | tee server/models/${modellower}.js
+fi
+mkdir public
+cd public
 sudo ditto -v $template_dir/* $PWD &&
 cd .. &&
 git init &&
