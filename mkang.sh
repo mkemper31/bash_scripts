@@ -4,6 +4,7 @@
 template_dir=~/Local_code/tracks/mean_stack/angular/angular_template
 dir=$1
 targetdir=$PWD/$dir/public
+secretkey=`cat /dev/urandom | env LC_CTYPE=C tr -cd 'a-z0-9' | head -c 16`
 echo "--> What do you want your database to be called? Leave blank if you do not want to use a database connection."
 read db
 if [ ! -z "$db" ]
@@ -45,7 +46,7 @@ app.use(bp.urlencoded({ extended: false }))
 app.use(bp.json())
 app.use(express.static( path.join(__dirname, './public/dist/public')));
 app.use(session({
-    secret: 'thisisakey',
+    secret: '${secretkey}',
     resave: false,
     saveUninitialized: true,
     cookie: { maxAge: 60000 }
