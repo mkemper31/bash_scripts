@@ -9,16 +9,16 @@ echo "--> What do you want your database to be called? Leave blank if you do not
 read db
 if [ ! -z "$db" ]
 then
-	echo "--> What do you want your first model to be named? Use a singular noun (eg. author)"
-	read model
-	if [ -z "$model" ]
-	then
-		echo "Model name not provided! Exiting..."
-		exit 1
-	else
-		modelupper="$(tr '[:lower:]' '[:upper:]' <<< ${model:0:1})${model:1}"
-		modellower="$(tr '[:upper:]' '[:lower:]' <<< ${model:0:1})${model:1}"
-	fi
+    echo "--> What do you want your first model to be named? Use a singular noun (eg. author)"
+    read model
+    if [ -z "$model" ]
+    then
+        echo "Model name not provided! Exiting..."
+        exit 1
+    else
+        modelupper="$(tr '[:lower:]' '[:upper:]' <<< ${model:0:1})${model:1}"
+        modellower="$(tr '[:upper:]' '[:lower:]' <<< ${model:0:1})${model:1}"
+    fi
 fi
 
 mkdir $dir
@@ -41,6 +41,7 @@ const app = express();
 const session = require('express-session');
 const path = require('path');
 const bp = require('body-parser');
+const router = require('./server/routes');
 app.use(express.urlencoded({extended: true}));
 app.use(bp.urlencoded({ extended: false }))
 app.use(bp.json())
@@ -51,8 +52,6 @@ app.use(session({
     saveUninitialized: true,
     cookie: { maxAge: 60000 }
 }));
-
-const router = require('./server/routes');
 app.use(router);
 
 app.listen(8000, () => console.log('listening on port 8000'));" >> server.js
@@ -135,14 +134,31 @@ router.get('/', ${modellower}s.all)
 
 module.exports = router;" | tee server/routes/${modellower}.routes.js
 fi
+touch server/routes/catchall.routes.js
+echo "const express = require('express');
+const path = require('path');
+const router = express.Router();
+
+router.all('*', (req, res, next) => {
+  res.sendFile(path.resolve('./public/dist/public/index.html'));
+});
+
+module.exports = router;" >> server/routes/catchall.routes.js
 touch server/routes/index.js
 echo "const express = require('express');
-const router = express.Router();" >> server/routes/index.js
+const router = express.Router();
+const catchallRoute = require('./catchall.routes');" >> server/routes/index.js
 if [ ! -z "$db" ]
 then
-    echo "const ${modellower}Routes = require('./${modellower}.routes');
-router.use('/${modellower}s', ${modellower}Routes);" >> server/routes/index.js
+    echo "const apiRouter = express.Router();
+const ${modellower}Routes = require('./${modellower}.routes');
+apiRouter.use('/${modellower}s', ${modellower}Routes);
+router.use('/api', apiRouter)
+  .use(catchallRoute);" >> server/routes/index.js
+else
+    echo "router.use(catchallRoute);" >> server/routes/index.js
 fi
+
 echo "module.exports = router;" >> server/routes/index.js
 if [[ "$OSTYPE" == "darwin"* ]]; then
     mkdir public
