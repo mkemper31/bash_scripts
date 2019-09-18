@@ -108,8 +108,7 @@ module.exports = {
             res.json(err);
         }
     },
-    getOneById: async (req, res) => {
-        let ${modellower} = await ${modelupper}.findById({ _id : req.params.id });
+    getOneById: (req, res) => {
         ${modelupper}.findById({ _id : req.params.id })
             .then((data) => {
                 res.json({${modellower}: data})
@@ -131,14 +130,14 @@ module.exports = {
             })
             .catch(err => res.json(err));
     },
-    delete: async (req, res) => {
+    delete: (req, res) => {
         ${modelupper}.findOneAndDelete({ _id : req.params.id })
             .then((data) => {
                 res.json(data);
             })
             .catch(err => {
                 res.json(err);
-            }) ;
+            });
     },
 }" | tee server/controllers/${modellower}s.js
 	touch server/models/${modellower}.js
