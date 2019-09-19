@@ -1,13 +1,63 @@
 #!/bin/bash
 # A script to create a new basic Angular project, by Michael K. https://github.com/mkemper31/
 
-template_dir=~/Local_code/tracks/mean_stack/angular/angular_template
+# Fill in your template directory before use. Point this variable at a directory holding a boilerplate Angular public folder.
+# Example: ~/my_code/angular_template
+# Inside ~/my_code/angular_template should be an Angular folder called `public`
+ang_folder_name=public
+response=y
+copy=true
 dir=$1
-targetdir=$PWD/$dir/public
+template_dir=""
 secretkey=`cat /dev/urandom | env LC_CTYPE=C tr -cd 'a-z0-9' | head -c 16`
+if [ -z "$template_dir" ]; then
+    echo "WARN: You did not specify an Angular template directory. Script will not copy an angular template; you will need to manually install it with ng new."
+    copy=false
+fi
+echo $copy
+if [ -n "$template_dir" && "$copy" == "true" ]; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if [ ! -f "${template_dir}/${ang_folder_name}" ]; then
+            echo "WARN: folder \"${ang_folder_name}\" not found in template directory."
+            read -e -p "Specify new angular folder name? [y/n] " response; : "${response:=y}"
+            if [[ "$response" == "y" ]]; then
+                read -e -p "New angular folder name: " ang_folder_name
+                if [ ! -f "${template_dir}/${ang_folder_name}" ]; then
+                    echo "No folder found. Exiting..."
+                    exit 1
+                fi
+            elif [[ "$response" == "n" ]]; then
+                echo "No angular template folder will be copied."
+                copy=false
+            else
+                echo "Invalid response. Exiting..."
+                exit 1
+            fi
+        fi
+    elif [[ "$OSTYPE" == "msys" ]]; then
+        if [ ! -f "${template_dir}\\${ang_folder_name}" ]; then
+            echo "WARN: folder \"${ang_folder_name}\" not found in template directory."
+            read -e -p "Specify new angular folder name? [y/n] " response; : "${response:=y}"
+            if [[ "$response" == "y" ]]; then
+                read -e -p "New angular folder name: " ang_folder_name
+                if [ ! -f "${template_dir}\\${ang_folder_name}" ]; then
+                    echo "No folder found. Exiting..."
+                    exit 1
+                fi
+            elif [[ "$response" == "n" ]]; then
+                echo "No angular template folder will be copied."
+                copy=false
+            else
+                echo "Invalid response. Exiting..."
+                exit 1
+            fi
+        fi
+    fi
+fi
+targetdir=$PWD/$dir/$ang_folder_name
 echo "--> What do you want your database to be called? Leave blank if you do not want to use a database connection."
 read db
-if [ ! -z "$db" ]
+if [ -n "$db" ]
 then
     echo "--> What do you want your first model to be named? Use a singular noun (eg. author)"
     read model
@@ -25,14 +75,35 @@ mkdir $dir
 cd $dir
 npm init -y &&
 npm i express &&
-if [ ! -z "$db" ]
+if [ -n "$db" ]
 then
 	npm i mongoose
 fi
 npm i express-session &&
 npm i body-parser
+if [[ "$copy" == "true" ]]; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        mkdir ${ang_folder_name}
+        cd ${ang_folder_name}
+        sudo ditto -v $template_dir/* $PWD &&
+        echo "Copy finished"
+        cd ..
+    elif [[ "$OSTYPE" == "msys" ]]; then
+        cp -R $template_dir\\${ang_folder_name} $PWD &&
+        echo "Copy finished"
+    fi
+else
+    read -e -p "No Angular template was copied. Would you like to specify one now? [y/n] " response; : "${response:=y}"
+    if [[ "$response" == "y" ]]; then
+        read -e -p "Specify name to pass to 'ng new' command (default: public): " ang_folder_name; : "${ang_folder_name:=public}"
+        ng new ${ang_folder_name} &&
+        cd ${ang_folder_name}
+        rm -rf .git*
+        cd ..
+    fi
+fi
 touch server.js
-if [ ! -z "$db" ]
+if [ -n "$db" ]
 then
     echo "require('./server/config/database');" >> server.js
 fi
@@ -45,7 +116,7 @@ const router = require('./server/routes');
 app.use(express.urlencoded({extended: true}));
 app.use(bp.urlencoded({ extended: false }))
 app.use(bp.json())
-app.use(express.static( path.join(__dirname, './public/dist/public')));
+app.use(express.static( path.join(__dirname, './${ang_folder_name}/dist/${ang_folder_name}')));
 app.use(session({
     secret: '${secretkey}',
     resave: false,
@@ -57,7 +128,7 @@ app.use(router);
 app.listen(8000, () => console.log('listening on port 8000'));" >> server.js
 mkdir server server/config server/controllers server/models server/routes
 
-if [ ! -z "$db" ]
+if [ -n "$db" ]
 then
     touch server/config/database.js
     echo "const path = require('path');
@@ -140,7 +211,7 @@ const path = require('path');
 const router = express.Router();
 
 router.all('*', (req, res, next) => {
-  res.sendFile(path.resolve('./public/dist/public/index.html'));
+  res.sendFile(path.resolve('./${ang_folder_name}/dist/${ang_folder_name}/index.html'));
 });
 
 module.exports = router;" >> server/routes/catchall.routes.js
@@ -148,7 +219,7 @@ touch server/routes/index.js
 echo "const express = require('express');
 const router = express.Router();
 const catchallRoute = require('./catchall.routes');" >> server/routes/index.js
-if [ ! -z "$db" ]
+if [ -n "$db" ]
 then
     echo "const apiRouter = express.Router();
 const ${modellower}Routes = require('./${modellower}.routes');
@@ -160,29 +231,24 @@ else
 fi
 
 echo "module.exports = router;" >> server/routes/index.js
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    mkdir public
-    cd public
-    sudo ditto -v $template_dir/* $PWD &&
-    echo "Copy finished"
-    cd ..
-elif [[ "$OSTYPE" == "msys" ]]; then
-    cp -R $template_dir\\public $PWD &&
-    echo "Copy finished"
-fi
 git init &&
 if [[ "$OSTYPE" == "darwin"* ]]; then
     if [ -f "${template_dir}/.gitignore" ]
     then
         sudo ditto -v $template_dir/.gitignore $PWD
+    else
+        touch .gitignore
+        echo "node_modules" >> .gitignore
     fi
 elif [[ "$OSTYPE" == "msys" ]]; then
     if [ -f "${template_dir}\\.gitignore" ]
     then
         cp -v $template_dir\\.gitignore $PWD
+    else
+        echo "node_modules" >> .gitignore
     fi
 fi
-if [[ "$OSTYPE" == "darwin"* ]]
+if [[ "$OSTYPE" == "darwin"* && "$copy" == "true" ]]
 then
     osascript -e "tell application \"Terminal\" to do script \"cd $targetdir && ng build --watch\""
 fi
