@@ -14,8 +14,7 @@ if [ -z "$template_dir" ]; then
     echo "WARN: You did not specify an Angular template directory. Script will not copy an angular template; you will need to manually install it with ng new."
     copy=false
 fi
-echo $copy
-if [ -n "$template_dir" && "$copy" == "true" ]; then
+if [ -n "$template_dir" ] && [ "$copy" == "true" ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
         if [ ! -f "${template_dir}/${ang_folder_name}" ]; then
             echo "WARN: folder \"${ang_folder_name}\" not found in template directory."
@@ -54,7 +53,6 @@ if [ -n "$template_dir" && "$copy" == "true" ]; then
         fi
     fi
 fi
-targetdir=$PWD/$dir/$ang_folder_name
 echo "--> What do you want your database to be called? Leave blank if you do not want to use a database connection."
 read db
 if [ -n "$db" ]
@@ -83,13 +81,13 @@ npm i express-session &&
 npm i body-parser
 if [[ "$copy" == "true" ]]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        mkdir ${ang_folder_name}
-        cd ${ang_folder_name}
-        sudo ditto -v $template_dir/* $PWD &&
+        mkdir "${ang_folder_name}"
+        cd "${ang_folder_name}"
+        sudo ditto -v "$template_dir/*" "$PWD" &&
         echo "Copy finished"
         cd ..
     elif [[ "$OSTYPE" == "msys" ]]; then
-        cp -R $template_dir\\${ang_folder_name} $PWD &&
+        cp -R "$template_dir\\${ang_folder_name}" "$PWD" &&
         echo "Copy finished"
     fi
 else
@@ -97,11 +95,13 @@ else
     if [[ "$response" == "y" ]]; then
         read -e -p "Specify name to pass to 'ng new' command (default: public): " ang_folder_name; : "${ang_folder_name:=public}"
         ng new ${ang_folder_name} &&
-        cd ${ang_folder_name}
+        cd "${ang_folder_name}"
+        copy=true
         rm -rf .git*
         cd ..
     fi
 fi
+targetdir="$PWD/$ang_folder_name"
 touch server.js
 if [ -n "$db" ]
 then
@@ -144,7 +144,7 @@ fs.readdirSync(path.join(__dirname, './../models')).forEach(function(file) {
 	  echo "const mongoose = require('mongoose');
 const ${modelupper} = mongoose.model('${modelupper}')
 module.exports = {
-    all: async (req, res) => {
+    index: async (req, res) => {
         try {
             const ${modellower}s = await ${modelupper}.find();
             res.json({${modellower}s: ${modellower}s});
@@ -153,7 +153,7 @@ module.exports = {
             res.json(err);
         }
     },
-    getOneById: (req, res) => {
+    show: (req, res) => {
         ${modelupper}.findById({ _id : req.params.id })
             .then((data) => {
                 res.json({${modellower}: data})
@@ -175,7 +175,7 @@ module.exports = {
             })
             .catch(err => res.json(err));
     },
-    delete: (req, res) => {
+    destroy: (req, res) => {
         ${modelupper}.findOneAndDelete({ _id : req.params.id })
             .then((data) => {
                 res.json(data);
@@ -193,28 +193,24 @@ const ${modelupper}Schema = new mongoose.Schema({
 }, {timestamps: true });
 mongoose.model('${modelupper}', ${modelupper}Schema);" | tee server/models/${modellower}.js
     touch server/routes/${modellower}.routes.js
-    echo "const express = require('express');
-const router = express.Router();
+    echo "const router = require('express').Router();
 const ${modellower}s = require('./../controllers/${modellower}s');
 
-router.get('/', ${modellower}s.all)
-    .get('/:id', ${modellower}s.getOneById)
+router.get('/', ${modellower}s.index)
+    .get('/:id', ${modellower}s.show)
     .post('/', ${modellower}s.create)
     .put('/:id', ${modellower}s.update)
-    .delete('/:id', ${modellower}s.delete)
+    .delete('/:id', ${modellower}s.destroy)
 
 module.exports = router;" | tee server/routes/${modellower}.routes.js
 fi
 touch server/routes/catchall.routes.js
-echo "const express = require('express');
+echo "const router = require('express').Router();
 const path = require('path');
-const router = express.Router();
 
-router.all('*', (req, res, next) => {
+module.exports = router.all('*', (req, res, next) => {
   res.sendFile(path.resolve('./${ang_folder_name}/dist/${ang_folder_name}/index.html'));
-});
-
-module.exports = router;" >> server/routes/catchall.routes.js
+});" >> server/routes/catchall.routes.js
 touch server/routes/index.js
 echo "const express = require('express');
 const router = express.Router();
