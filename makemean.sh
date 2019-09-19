@@ -16,12 +16,12 @@ if [ -z "$template_dir" ]; then
 fi
 if [ -n "$template_dir" ] && [ "$copy" == "true" ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        if [ ! -f "${template_dir}/${ang_folder_name}" ]; then
+        if [ ! -d "${template_dir}/${ang_folder_name}/" ]; then
             echo "WARN: folder \"${ang_folder_name}\" not found in template directory."
             read -e -p "Specify new angular folder name? [y/n] " response; : "${response:=y}"
             if [[ "$response" == "y" ]]; then
                 read -e -p "New angular folder name: " ang_folder_name
-                if [ ! -f "${template_dir}/${ang_folder_name}" ]; then
+                if [ ! -d "${template_dir}/${ang_folder_name}/" ]; then
                     echo "No folder found. Exiting..."
                     exit 1
                 fi
@@ -34,12 +34,12 @@ if [ -n "$template_dir" ] && [ "$copy" == "true" ]; then
             fi
         fi
     elif [[ "$OSTYPE" == "msys" ]]; then
-        if [ ! -f "${template_dir}\\${ang_folder_name}" ]; then
+        if [ ! -d "${template_dir}\\${ang_folder_name}\\" ]; then
             echo "WARN: folder \"${ang_folder_name}\" not found in template directory."
             read -e -p "Specify new angular folder name? [y/n] " response; : "${response:=y}"
             if [[ "$response" == "y" ]]; then
                 read -e -p "New angular folder name: " ang_folder_name
-                if [ ! -f "${template_dir}\\${ang_folder_name}" ]; then
+                if [ ! -d "${template_dir}\\${ang_folder_name}\\" ]; then
                     echo "No folder found. Exiting..."
                     exit 1
                 fi
@@ -75,7 +75,7 @@ npm init -y &&
 npm i express &&
 if [ -n "$db" ]
 then
-	npm i mongoose
+    npm i mongoose
 fi
 npm i express-session &&
 npm i body-parser
@@ -83,7 +83,7 @@ if [[ "$copy" == "true" ]]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
         mkdir "${ang_folder_name}"
         cd "${ang_folder_name}"
-        sudo ditto -v "$template_dir/*" "$PWD" &&
+        sudo ditto -v "${template_dir}/"* "$PWD" &&
         echo "Copy finished"
         cd ..
     elif [[ "$OSTYPE" == "msys" ]]; then
@@ -140,8 +140,8 @@ fs.readdirSync(path.join(__dirname, './../models')).forEach(function(file) {
         require(path.join(__dirname, './../models') + '/' + file);
     }
 });" >> server/config/database.js
-	  touch server/controllers/${modellower}s.js
-	  echo "const mongoose = require('mongoose');
+      touch server/controllers/${modellower}s.js
+      echo "const mongoose = require('mongoose');
 const ${modelupper} = mongoose.model('${modelupper}')
 module.exports = {
     index: async (req, res) => {
@@ -185,8 +185,8 @@ module.exports = {
             });
     },
 }" | tee server/controllers/${modellower}s.js
-	  touch server/models/${modellower}.js
-	  echo "const mongoose = require('mongoose');
+    touch server/models/${modellower}.js
+    echo "const mongoose = require('mongoose');
 const ${modelupper}Schema = new mongoose.Schema({
     title: { type: String, required: true},
     description: { type: String, default: '', },
